@@ -1,5 +1,5 @@
 const express = require('express');
-const _ = require('loadash');
+const _ = require('lodash');
 const bodyParser = require('body-parser');
 const {ObjectID} = require('mongodb');
 
@@ -65,7 +65,7 @@ app.delete('/todos/:id', (req,res) => {
 })
 
 app.patch('/todos/:id', (req, res) => {
-    const id = req.params.body;
+    const id = req.params.id;
     const body = _.pick(req.body, ['text', 'completed']);
 
     if(ObjectID.isValid(id)){
@@ -76,9 +76,10 @@ app.patch('/todos/:id', (req, res) => {
             body.completed = false;
             body.completedAt = null;
         }
-        Todo.findByIdAndUpdate(id).then((todo) => {
+
+        Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((todo) => {
             if(todo){
-                res.send(todo);
+                res.send({todo});
             }
             else res.status(404).send();
         })

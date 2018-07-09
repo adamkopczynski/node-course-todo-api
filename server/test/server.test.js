@@ -12,7 +12,9 @@ const todos = [{
 },
 {
     _id: new ObjectID(),
-    text: 'Second test todo'
+    text: 'Second test todo',
+    completed: false,
+    completedAt: null
 }]
 
 beforeEach((done) => {
@@ -105,6 +107,71 @@ describe('GET /todos/:id', () => {
     })
 })
 
+describe('PATCH /todos/:id', () => {
+    it('should complete todo and update text', (done) => {
+        const id = todos[0]._id.toHexString();
+        const text = 'Updated text';
+
+        request(app)
+        .patch(`/todos/${id}`)
+        .send({completed: true, text})
+        .expect(200)
+        .expect((res) => {
+            expect(res.body.todo.text).toBe(text);
+        })
+        .end((err, res) => {
+            if(err) return done(err);
+            
+            Todo.findOne({id})
+            .then((todo) => {
+                expect(todo.completed).toBe(true);
+                expect(todo.text).toBe(text);
+                expect(todoCompletedAt).toBeA('number');
+                done();
+            })
+            .catch((e) => done(e))
+        })
+    })
+
+    it('should clear completedAt when todo is not completed', (done) => {
+        const id = todos[0]._id.toHexString();
+        const text = 'Updated text';
+
+        request(app)
+        .patch(`/todos/${id}`)
+        .send({completed: false, text})
+        .expect(200)
+        .expect((res) => {
+            expect(res.body.todo.text).toBe(text);
+        })
+        .end((err, res) => {
+            if(err) return done(err);
+            
+            Todo.findOne({id})
+            .then((todo) => {
+                expect(todo.text).toBe(text);
+                expect(todoCompletedAt).toBeFalsy();
+                done();
+            })
+            .catch((e) => done(e))
+        })
+    })
+
+    it('should return 404 if todo not found', (done) => {
+        request(app)
+        .patch(`/todos/${new ObjectID().toHexString()}`)
+        .expect(404)
+        .end(done)
+    })
+
+    it('should return 404 for non-object ids', (done) => {
+        request(app)
+        .patch(`/todos/123`)
+        .expect(404)
+        .end(done)
+    })
+})
+
 describe('DELETE /todos/:id', () => {
     it('should delete todo with id', (done) => {
         const id = todos[0]._id.toHexString();
@@ -141,4 +208,3 @@ describe('DELETE /todos/:id', () => {
         .end(done)
     })
 })
- 
