@@ -4,25 +4,10 @@ const {ObjectID} = require('mongodb');
 
 const {app} = require('../server');
 const {Todo} = require('../models/todo');
+const {todos, populateTodos, users, populateUsers} = require('./seed/seed');
 
-
-const todos = [{
-    _id: new ObjectID(),
-    text: 'First test todo'
-},
-{
-    _id: new ObjectID(),
-    text: 'Second test todo',
-    completed: false,
-    completedAt: null
-}]
-
-beforeEach((done) => {
-    Todo.remove({}).then(() => {
-        return Todo.insertMany(todos)
-    })
-    .then(() => done());
-})
+beforeEach((done) => populateUsers(done))
+beforeEach((done) => populateTodos(done))
 
 describe('POST /todos', () => {
     it('should create a new todo', (done) => {
@@ -122,11 +107,11 @@ describe('PATCH /todos/:id', () => {
         .end((err, res) => {
             if(err) return done(err);
             
-            Todo.findOne({id})
+            Todo.findOne({_id: id})
             .then((todo) => {
                 expect(todo.completed).toBe(true);
                 expect(todo.text).toBe(text);
-                expect(todoCompletedAt).toBeA('number');
+                expect(todo.completedAt).toBeTruthy();
                 done();
             })
             .catch((e) => done(e))
@@ -147,10 +132,10 @@ describe('PATCH /todos/:id', () => {
         .end((err, res) => {
             if(err) return done(err);
             
-            Todo.findOne({id})
+            Todo.findOne({_id: id})
             .then((todo) => {
                 expect(todo.text).toBe(text);
-                expect(todoCompletedAt).toBeFalsy();
+                expect(todo.completedAt).toBeFalsy();
                 done();
             })
             .catch((e) => done(e))
@@ -207,4 +192,101 @@ describe('DELETE /todos/:id', () => {
         .expect(404)
         .end(done)
     })
+})
+
+describe('GET /users/me', () => {
+    it('should return user if authenticated', (done) => {
+        request(app)
+          .get('/users/me')
+          .set('x-auth', users[0].tokens[0].token)
+          .expect(200)
+          .expect((res) => {
+            expect(res.body._id).toBe(users[0]._id.toHexString());
+            expect(res.body.email).toBe(users[0].email);
+          })
+          .end(done);
+      });
+
+    it('should return 401 if not authenticated', (done) => {
+        request(app)
+        .get('/users/me')
+        .set('x-auth', 'abc')
+        .expect(401)
+        .expect((res) => {
+            expect(res.body).toEqual({});
+        })
+        .end(done)
+    })
+})
+
+describe('POST /users', () => {
+    it('should create user', (done) => {
+        const email = 'example@example.com';
+        const password = 'qwerty123';
+
+        request(app)
+        .post('/users')
+        .send({
+            email,
+            password
+        })
+        .expect(200)
+        .expect(res => {
+            expect(res.headers['x-auth']).toBeTruthy();
+            expect(res.body.email).toEqual(email);
+            expect(res.body._id).toBeTruthy();
+        })
+        .end(done)
+    })
+})
+
+describe('POST /users/login', () => {
+    it('should login user', (done) => {
+
+        request(app)
+        .post('/users/login')
+        .send({
+            email: users[0].email,
+            password: users[0].password
+        })
+        .expect(200)
+        .expect(res => {
+            expect(res.headers['x-auth']).toBeTruthy();
+            expect(res.body.email).toBe(users[0].email);
+            expect(res.body._id).toBeTruthy();
+        })
+        .end(done)
+    })
+
+    it('should reject login with invalid credentials', (done) => {
+        const email = 'exam@example.com';
+        const password = 'qwerty123';
+
+        request(app)
+        .post('/users/login')
+        .send({
+            email,
+            password
+        })
+        .expect(400)
+        .expect(res => {
+            expect(res.body).toEqual({});
+        })
+        .end(done)
+    })
+})
+
+describe('DELETE /users/me/token', () => {
+    it('should logout user', (done) => {
+
+        request(app)
+        .delete('/users/me/token')
+        .set('x-auth', users[1].tokens[0].token)
+        .expect(200)
+        .expect(res => {
+            expect(res.body.user.tokens.length).toBe(0);
+        })
+        .end(done)
+    })
+
 })
