@@ -4,6 +4,7 @@ const {ObjectID} = require('mongodb');
 
 const {app} = require('../server');
 const {Todo} = require('../models/todo');
+const {User} = require('../models/user');
 const {todos, populateTodos, users, populateUsers} = require('./seed/seed');
 
 beforeEach((done) => populateUsers(done))
@@ -281,12 +282,20 @@ describe('DELETE /users/me/token', () => {
 
         request(app)
         .delete('/users/me/token')
-        .set('x-auth', users[1].tokens[0].token)
+        .set('x-auth', users[0].tokens[0].token)
         .expect(200)
-        .expect(res => {
-            expect(res.body.user.tokens.length).toBe(0);
+        .end((err, res) => {
+            if(err){
+               return done(err);
+            }
+
+            User.findById({_id: users[0]._id}).then((user) => {
+                expect(user.tokens.length).toBe(0);
+                done();
+            })
+            .catch(e => {done(e)})
+
         })
-        .end(done)
     })
 
 })
