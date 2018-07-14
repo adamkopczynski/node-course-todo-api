@@ -1,3 +1,5 @@
+require('./config/config');
+
 const express = require('express');
 const _ = require('lodash');
 const bodyParser = require('body-parser');
@@ -9,7 +11,7 @@ const {User} = require('./models/user');
 const {authenticate} = require('./middleware/authenticate')
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 app.use(bodyParser.json());
 
@@ -34,7 +36,7 @@ app.get('/todos',authenticate,  (req, res) => {
     .catch((e) => res.status(400).send(e))
 })
 
-app.get('/todos/:id',authenticate, (req,res) => {
+app.get('/todos/:id', authenticate, (req,res) => {
     const id = req.params.id;
 
     if(ObjectID.isValid(id)){

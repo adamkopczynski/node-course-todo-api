@@ -194,6 +194,7 @@ describe('DELETE /todos/:id', () => {
     it('should return 404 if todo not found', (done) => {
         request(app)
         .delete(`/todos/${new ObjectID().toHexString()}`)
+        .set('x-auth', users[0].tokens[0].token)
         .expect(404)
         .end(done)
     })
@@ -201,6 +202,7 @@ describe('DELETE /todos/:id', () => {
     it('should return 404 for non-object ids', (done) => {
         request(app)
         .delete(`/todos/123`)
+        .set('x-auth', users[0].tokens[0].token)
         .expect(404)
         .end(done)
     })
